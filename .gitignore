@@ -13,3 +13,4 @@ cmd.md
 one-api
 web/.DS_Store
 .DS_Store
+web/default/.npmrc
