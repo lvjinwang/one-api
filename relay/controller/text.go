@@ -15,10 +15,16 @@ import (
 	"github.com/songquanpeng/one-api/relay/meta"
 	"github.com/songquanpeng/one-api/relay/model"
 	"io"
+	"moul.io/http2curl"
 	"net/http"
+	"strings"
 )
 
 func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
+	command, _ := http2curl.GetCurlCommand(c.Request)
+	logger.Infof(c, "RelayTextHelper curl: \n%s", command.String())
+
+	c.Request.Header.Set("Accept", "*/*")
 	ctx := c.Request.Context()
 	meta := meta.GetByContext(c)
 	// get & validate textRequest
@@ -28,6 +34,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return openai.ErrorWrapper(err, "invalid_text_request", http.StatusBadRequest)
 	}
 	meta.IsStream = textRequest.Stream
+	//meta.IsStream = false
 
 	// map model name
 	var isModelMapped bool
@@ -78,6 +85,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		}
 		logger.Debugf(ctx, "converted request: \n%s", string(jsonData))
 		requestBody = bytes.NewBuffer(jsonData)
+		logger.Infof(ctx, "call adaptor request: \n%s", string(jsonData))
 	}
 
 	// do request
@@ -86,7 +94,10 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		logger.Errorf(ctx, "DoRequest failed: %s", err.Error())
 		return openai.ErrorWrapper(err, "do_request_failed", http.StatusInternalServerError)
 	}
+	//bodyByte, err := ioutil.ReadAll(resp.Body)
+	//logger.Infof(ctx, "call adaptor resp: \n%s", string(bodyByte))
 	if isErrorHappened(meta, resp) {
+		logger.Infof(ctx, "isErrorHappened: \n%v, %v", meta.IsStream, strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json"))
 		billing.ReturnPreConsumedQuota(ctx, preConsumedQuota, meta.TokenId)
 		return RelayErrorHandler(resp)
 	}

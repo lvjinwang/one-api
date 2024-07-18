@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/songquanpeng/one-api/common/client"
+	"github.com/songquanpeng/one-api/common/logger"
 	"github.com/songquanpeng/one-api/relay/meta"
 	"io"
+	"moul.io/http2curl"
 	"net/http"
 )
 
@@ -23,6 +25,7 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 	if err != nil {
 		return nil, fmt.Errorf("get request url failed: %w", err)
 	}
+	logger.Infof(c, "DoRequestHelper url: %s", fullRequestURL)
 	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("new request failed: %w", err)
@@ -39,6 +42,8 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 }
 
 func DoRequest(c *gin.Context, req *http.Request) (*http.Response, error) {
+	command, _ := http2curl.GetCurlCommand(req)
+	logger.Infof(c, "DoRequest curl: \n%s", command.String())
 	resp, err := client.HTTPClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -48,5 +53,9 @@ func DoRequest(c *gin.Context, req *http.Request) (*http.Response, error) {
 	}
 	_ = req.Body.Close()
 	_ = c.Request.Body.Close()
+	//bodyRes, err := ioutil.ReadAll(resp.Body)
+	//logger.Infof(c, "DoRequest resp: \n%s", string(bodyRes))
+	//resbody := ioutil.NopCloser(bytes.NewReader(bodyRes))
+	//resp.Body = resbody
 	return resp, nil
 }

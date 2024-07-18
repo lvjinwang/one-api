@@ -141,6 +141,7 @@ func streamMetaResponseZhipu2OpenAI(zhipuResponse *StreamMetaResponse) (*openai.
 }
 
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
+	logger.SysLogf("StreamHandler")
 	var usage *model.Usage
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
@@ -155,6 +156,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		return 0, nil, nil
 	})
+	logger.SysLogf("StreamHandler dataChan")
+
 	dataChan := make(chan string)
 	metaChan := make(chan string)
 	stopChan := make(chan bool)
@@ -178,6 +181,8 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		}
 		stopChan <- true
 	}()
+	logger.SysLogf("StreamHandler SetEventStreamHeaders")
+
 	common.SetEventStreamHeaders(c)
 	c.Stream(func(w io.Writer) bool {
 		select {
@@ -211,6 +216,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 			return false
 		}
 	})
+	logger.SysLogf("StreamHandler resp.Body.Close()")
 	err := resp.Body.Close()
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
@@ -232,6 +238,8 @@ func Handler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *
 	if err != nil {
 		return openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError), nil
 	}
+	logger.Infof(c, "call adaptor resp: \n%s", string(responseBody))
+
 	if !zhipuResponse.Success {
 		return &model.ErrorWithStatusCode{
 			Error: model.Error{
