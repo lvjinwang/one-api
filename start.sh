@@ -1,3 +1,5 @@
+go build -o one-api
+
 srv_name="one-api"
 chmod +x ./$srv_name
 #重启，如果已经存在则关闭重启
